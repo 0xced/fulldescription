@@ -3,7 +3,6 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <mach-o/dyld.h>
-#import "JRSwizzle/JRSwizzle.h"
 
 @interface NSObject ()
 - (NSString *) debugDescription;
@@ -14,15 +13,24 @@ static NSUInteger gIndentWidth = 4;
 static NSUInteger gIndentLevel = 0;
 static NSMutableSet *gObjects = nil;
 
+static void swizzleDescription(const char *className)
+{
+	Class class = objc_lookUpClass(className);
+	Method debugDescription = class_getInstanceMethod(class, @selector(debugDescription));
+	Method fullDescription = class_getInstanceMethod(class, @selector(fullDescription));
+	class_addMethod(class, @selector(debugDescription), class_getMethodImplementation(class, @selector(debugDescription)), method_getTypeEncoding(debugDescription));
+	class_addMethod(class, @selector(fullDescription), class_getMethodImplementation(class, @selector(fullDescription)), method_getTypeEncoding(fullDescription));
+	debugDescription = class_getInstanceMethod(class, @selector(debugDescription));
+	fullDescription = class_getInstanceMethod(class, @selector(fullDescription));
+	method_exchangeImplementations(debugDescription, fullDescription);
+}
+
 // Used by fullDescription.gdbinit
 void SwizzleFullDescription(void)
 {
-	[NSObject       jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
-	[NSString       jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
-	[NSArray        jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
-	[NSPointerArray jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
-	[NSDictionary   jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
-	[NSSet          jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
+	const char *classNames[] = {"NSObject", "NSString", "NSArray", "NSPointerArray", "NSDictionary", "NSSet"};
+	for (unsigned int i = 0; i < sizeof(classNames) / sizeof(classNames[0]); i++)
+		swizzleDescription(classNames[i]);
 }
 
 __attribute__((constructor)) void initialize(void)
