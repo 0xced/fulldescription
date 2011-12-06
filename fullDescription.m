@@ -38,7 +38,10 @@ void disableFullDescription(void)
 
 __attribute__((constructor)) void initialize(void)
 {
-	CFPropertyListRef indentWidthPref = CFPreferencesCopyAppValue(CFSTR("IndentWidth"), CFSTR("com.apple.Xcode"));
+	CFPropertyListRef indentWidthPref = CFPreferencesCopyAppValue(CFSTR("DVTTextIndentWidth"), CFSTR("com.apple.dt.Xcode"));
+	if (!indentWidthPref)
+		indentWidthPref = CFPreferencesCopyAppValue(CFSTR("IndentWidth"), CFSTR("com.apple.Xcode"));
+	
 	if (indentWidthPref)
 	{
 		gIndentWidth = [(id)indentWidthPref intValue];
