@@ -1,16 +1,40 @@
-// Copyright © 2009 Cédric Luthi <http://0xced.blogspot.com>
+// Copyright © 2009-2011 Cédric Luthi <http://0xced.blogspot.com>
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
+#import <mach-o/dyld.h>
 #import "JRSwizzle/JRSwizzle.h"
 
 @interface NSObject ()
 - (NSString *) debugDescription;
 @end
 
+static BOOL gColorize = YES;
 static NSUInteger gIndentWidth = 4;
 static NSUInteger gIndentLevel = 0;
 static NSMutableSet *gObjects = nil;
+
+BOOL enableFullDescription(void)
+{
+	BOOL swizzleOK = YES;
+	swizzleOK = swizzleOK && [NSObject       jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
+	swizzleOK = swizzleOK && [NSString       jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
+	swizzleOK = swizzleOK && [NSArray        jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
+	swizzleOK = swizzleOK && [NSPointerArray jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
+	swizzleOK = swizzleOK && [NSDictionary   jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
+	swizzleOK = swizzleOK && [NSSet          jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
+	return swizzleOK;
+}
+
+void disableFullDescription(void)
+{
+	[NSObject       jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
+	[NSString       jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
+	[NSArray        jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
+	[NSPointerArray jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
+	[NSDictionary   jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
+	[NSSet          jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
+}
 
 __attribute__((constructor)) void initialize(void)
 {
@@ -20,34 +44,32 @@ __attribute__((constructor)) void initialize(void)
         gIndentWidth = [(id)indentWidthPref intValue];
         CFRelease(indentWidthPref);
     }
+	
+	for (uint32_t i = 0; i < _dyld_image_count(); i++)
+	{
+		if (strstr(_dyld_get_image_name(i), "DevToolsBundleInjection"))
+		{
+			gColorize = NO;
+			break;
+		}
+	}
     
     gObjects = [[NSMutableSet alloc] initWithCapacity:256];
+    
+	BOOL enabled = enableFullDescription();
+	if (enabled)
+		NSLog(@"FullDescription successfully loaded");
+	else
+		NSLog(@"FullDescription failed to load");
 }
 
 __attribute__((destructor)) void cleanup(void)
 {
     [gObjects release];
+	disableFullDescription();
 }
 
-void fullDescription_enable(void)
-{
-    [NSObject     jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-    [NSString     jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-    [NSArray      jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-    [NSDictionary jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-    [NSSet        jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-}
-
-void fullDescription_disable(void)
-{
-    [NSObject     jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
-    [NSString     jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
-    [NSArray      jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
-    [NSDictionary jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
-    [NSSet        jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
-}
-
-void indent(NSMutableString *string, NSUInteger indentLevel)
+static void indent(NSMutableString *string, NSUInteger indentLevel)
 {
     for (NSUInteger i = 0; i < indentLevel * gIndentWidth; i++)
     {
@@ -72,12 +94,22 @@ enum {
 #define keyColor cyan
 #define idColor red
 
-NSMutableString* color(NSString *string, int color)
+static NSString* color(NSString *string, int color)
 {
-    return [NSMutableString stringWithFormat:@"\033[%dm%@\033[0m", color, string];
+	if (gColorize)
+		return [NSString stringWithFormat:@"\033[%dm%@\033[0m", color, string];
+	else
+		return string;
 }
 
-NSString *debugDescription(id self)
+static BOOL hasMeaningfulDescription(id self)
+{
+	IMP selfDescriptionIMP = method_getImplementation(class_getInstanceMethod([self class], @selector(description)));
+	IMP nsObjectDescriptionIMP = method_getImplementation(class_getInstanceMethod([NSObject class], @selector(description)));
+	return selfDescriptionIMP != nsObjectDescriptionIMP;
+}
+
+static NSString *debugDescription(id self)
 {
     if (self)
     {
@@ -86,7 +118,7 @@ NSString *debugDescription(id self)
     Class class = [self class];
     NSMutableString *desc = [NSMutableString stringWithFormat:@"[%p: %@]", self, class];
     unsigned int ivarCount;
-    Ivar *ivars = class_copyIvarList(class, &ivarCount);
+    Ivar *ivars = class_copyIvarList(class, &ivarCount); // instance variables declared by superclasses are not included
     
     [desc appendString:(ivarCount <= 1) ? @" " : @"\n"];
     
@@ -107,7 +139,8 @@ NSString *debugDescription(id self)
                 if (![gObjects containsObject:obj] || [obj isKindOfClass:[NSString class]])
                 {
                     [desc appendFormat:@"%@: %@", ivarName, [obj debugDescription]];
-                } else
+                }
+                else
                 {
                     [desc appendFormat:@"%@: => ", ivarName];
                     [desc appendString:color([NSString stringWithFormat:@"%p", obj], referenceColor)];
@@ -127,14 +160,23 @@ NSString *debugDescription(id self)
     return [NSString stringWithString:desc];
 }
 
-NSString *collectionDescription(id collection)
+static NSString *collectionDescription(id collection)
 {
     BOOL isArray = NO, isDictionary = NO, isSet = NO;
     NSString *markerStart = @"[?", *markerEnd = @"?]";
-    if ([collection isKindOfClass:[NSArray class]])
+    if ([collection isKindOfClass:[NSArray class]] || [collection isKindOfClass:[NSPointerArray class]])
     {
-        markerStart = @"(";
-        markerEnd   = @")";
+		if ([collection isKindOfClass:[NSPointerArray class]])
+		{
+			markerStart = @"<(";
+			markerEnd   = @")>";
+			collection = [collection allObjects];
+		}
+		else
+		{
+			markerStart = @"(";
+			markerEnd   = @")";
+		}
         isArray = YES;
     }
     else if ([collection isKindOfClass:[NSDictionary class]])
@@ -205,15 +247,38 @@ NSString *collectionDescription(id collection)
 
 - (NSString *) fullDescription
 {
-    NSString *desc;
-    gIndentLevel++;
-    desc = debugDescription(self);
-    gIndentLevel--;
-    if (gIndentLevel == 0)
-    {
-        [gObjects removeAllObjects];
-    }
-    return desc;
+	if (hasMeaningfulDescription(self))
+	{
+		NSMutableString *desc = [NSMutableString stringWithString:gIndentLevel > 0 ? @"!! " : @""];
+		NSArray *descriptionLines = [[self description] componentsSeparatedByString:@"\n"];
+		NSUInteger i = 0;
+		for (NSString *line in descriptionLines)
+		{
+			if ([line length] > 0)
+			{
+				if (i > 0)
+				{
+					[desc appendString:@"\n"];
+					indent(desc, gIndentLevel);
+				}
+				[desc appendString:line];
+			}
+			i++;
+		}
+		return desc;
+	}
+	else
+	{
+		NSString *desc;
+		gIndentLevel++;
+		desc = debugDescription(self);
+		gIndentLevel--;
+		if (gIndentLevel == 0)
+		{
+			[gObjects removeAllObjects];
+		}
+		return desc;
+	}
 }
 
 @end
@@ -233,6 +298,15 @@ NSString *collectionDescription(id collection)
 - (NSString *) fullDescription
 {
     return collectionDescription(self);
+}
+
+@end
+
+@implementation NSPointerArray (fullDescription)
+
+- (NSString *) fullDescription
+{
+	return collectionDescription(self);
 }
 
 @end
