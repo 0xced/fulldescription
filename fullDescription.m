@@ -105,13 +105,6 @@ static NSString* color(NSString *string, int color)
 		return string;
 }
 
-static BOOL hasMeaningfulDescription(id self)
-{
-	IMP selfDescriptionIMP = method_getImplementation(class_getInstanceMethod([self class], @selector(description)));
-	IMP nsObjectDescriptionIMP = method_getImplementation(class_getInstanceMethod([NSObject class], @selector(description)));
-	return selfDescriptionIMP != nsObjectDescriptionIMP;
-}
-
 static NSString *debugDescription(id self)
 {
 	if (self)
@@ -250,38 +243,15 @@ static NSString *collectionDescription(id collection)
 
 - (NSString *) fullDescription
 {
-	if (hasMeaningfulDescription(self))
+	NSString *desc;
+	gIndentLevel++;
+	desc = debugDescription(self);
+	gIndentLevel--;
+	if (gIndentLevel == 0)
 	{
-		NSMutableString *desc = [NSMutableString stringWithString:gIndentLevel > 0 ? @"!! " : @""];
-		NSArray *descriptionLines = [[self description] componentsSeparatedByString:@"\n"];
-		NSUInteger i = 0;
-		for (NSString *line in descriptionLines)
-		{
-			if ([line length] > 0)
-			{
-				if (i > 0)
-				{
-					[desc appendString:@"\n"];
-					indent(desc, gIndentLevel);
-				}
-				[desc appendString:line];
-			}
-			i++;
-		}
-		return desc;
+		[gObjects removeAllObjects];
 	}
-	else
-	{
-		NSString *desc;
-		gIndentLevel++;
-		desc = debugDescription(self);
-		gIndentLevel--;
-		if (gIndentLevel == 0)
-		{
-			[gObjects removeAllObjects];
-		}
-		return desc;
-	}
+	return desc;
 }
 
 @end
