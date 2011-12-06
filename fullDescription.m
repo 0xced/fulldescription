@@ -14,19 +14,8 @@ static NSUInteger gIndentWidth = 4;
 static NSUInteger gIndentLevel = 0;
 static NSMutableSet *gObjects = nil;
 
-BOOL enableFullDescription(void)
-{
-	BOOL swizzleOK = YES;
-	swizzleOK = swizzleOK && [NSObject       jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-	swizzleOK = swizzleOK && [NSString       jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-	swizzleOK = swizzleOK && [NSArray        jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-	swizzleOK = swizzleOK && [NSPointerArray jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-	swizzleOK = swizzleOK && [NSDictionary   jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-	swizzleOK = swizzleOK && [NSSet          jr_swizzleMethod:@selector(debugDescription) withMethod:@selector(fullDescription) error:nil];
-	return swizzleOK;
-}
-
-void disableFullDescription(void)
+// Used by fullDescription.gdbinit
+void SwizzleFullDescription(void)
 {
 	[NSObject       jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
 	[NSString       jr_swizzleMethod:@selector(fullDescription) withMethod:@selector(debugDescription) error:nil];
@@ -59,17 +48,7 @@ __attribute__((constructor)) void initialize(void)
 	
 	gObjects = [[NSMutableSet alloc] initWithCapacity:256];
 	
-	BOOL enabled = enableFullDescription();
-	if (enabled)
-		NSLog(@"FullDescription successfully loaded");
-	else
-		NSLog(@"FullDescription failed to load");
-}
-
-__attribute__((destructor)) void cleanup(void)
-{
-	[gObjects release];
-	disableFullDescription();
+	printf("Loaded fullDescription.dylib successfully.\n");
 }
 
 static void indent(NSMutableString *string, NSUInteger indentLevel)
