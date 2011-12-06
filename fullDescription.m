@@ -47,8 +47,6 @@ __attribute__((constructor)) void initialize(void)
 	}
 	
 	gObjects = [[NSMutableSet alloc] initWithCapacity:256];
-	
-	printf("Loaded fullDescription.dylib successfully.\n");
 }
 
 static void indent(NSMutableString *string, NSUInteger indentLevel)
