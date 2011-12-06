@@ -38,12 +38,12 @@ void disableFullDescription(void)
 
 __attribute__((constructor)) void initialize(void)
 {
-    CFPropertyListRef indentWidthPref = CFPreferencesCopyAppValue(CFSTR("IndentWidth"), CFSTR("com.apple.Xcode"));
-    if (indentWidthPref)
-    {
-        gIndentWidth = [(id)indentWidthPref intValue];
-        CFRelease(indentWidthPref);
-    }
+	CFPropertyListRef indentWidthPref = CFPreferencesCopyAppValue(CFSTR("IndentWidth"), CFSTR("com.apple.Xcode"));
+	if (indentWidthPref)
+	{
+		gIndentWidth = [(id)indentWidthPref intValue];
+		CFRelease(indentWidthPref);
+	}
 	
 	for (uint32_t i = 0; i < _dyld_image_count(); i++)
 	{
@@ -53,9 +53,9 @@ __attribute__((constructor)) void initialize(void)
 			break;
 		}
 	}
-    
-    gObjects = [[NSMutableSet alloc] initWithCapacity:256];
-    
+	
+	gObjects = [[NSMutableSet alloc] initWithCapacity:256];
+	
 	BOOL enabled = enableFullDescription();
 	if (enabled)
 		NSLog(@"FullDescription successfully loaded");
@@ -65,27 +65,27 @@ __attribute__((constructor)) void initialize(void)
 
 __attribute__((destructor)) void cleanup(void)
 {
-    [gObjects release];
+	[gObjects release];
 	disableFullDescription();
 }
 
 static void indent(NSMutableString *string, NSUInteger indentLevel)
 {
-    for (NSUInteger i = 0; i < indentLevel * gIndentWidth; i++)
-    {
-        [string appendString:@" "];
-    }
+	for (NSUInteger i = 0; i < indentLevel * gIndentWidth; i++)
+	{
+		[string appendString:@" "];
+	}
 }
 
 enum {
-    black = 30,
-    red,
-    green,
-    yellow,
-    blue,
-    magenta,
-    cyan,
-    white
+	black = 30,
+	red,
+	green,
+	yellow,
+	blue,
+	magenta,
+	cyan,
+	white
 };
 
 #define pathColor blue
@@ -111,61 +111,61 @@ static BOOL hasMeaningfulDescription(id self)
 
 static NSString *debugDescription(id self)
 {
-    if (self)
-    {
-        [gObjects addObject:self];
-    }
-    Class class = [self class];
-    NSMutableString *desc = [NSMutableString stringWithFormat:@"[%p: %@]", self, class];
-    unsigned int ivarCount;
-    Ivar *ivars = class_copyIvarList(class, &ivarCount); // instance variables declared by superclasses are not included
-    
-    [desc appendString:(ivarCount <= 1) ? @" " : @"\n"];
-    
-    for(int i = 0; i < ivarCount; i++)
-    {
-        Ivar ivar = ivars[i];
-        NSString *ivarName = [NSString stringWithFormat:@"%s", ivar_getName(ivar)];
-        id obj;
-        const char *typeEncoding = ivar_getTypeEncoding(ivar);
-        
-        if (ivarCount > 1)
-            indent(desc, gIndentLevel);
-        
-        switch (typeEncoding[0]) 
-        {
-            case '@':
-                obj = [self valueForKey:ivarName];
-                if (![gObjects containsObject:obj] || [obj isKindOfClass:[NSString class]])
-                {
-                    [desc appendFormat:@"%@: %@", ivarName, [obj debugDescription]];
-                }
-                else
-                {
-                    [desc appendFormat:@"%@: => ", ivarName];
-                    [desc appendString:color([NSString stringWithFormat:@"%p", obj], referenceColor)];
-                    [desc appendString:@""];
-                }
-                break;
-            default:
-                [desc appendFormat:@"%@: %p", ivarName, object_getIvar(self, ivar)];
-                break;
-        }
-        if (i < ivarCount-1)
-        {
-            [desc appendString:@"\n"];
-        }
-    }
-    free(ivars);
-    return [NSString stringWithString:desc];
+	if (self)
+	{
+		[gObjects addObject:self];
+	}
+	Class class = [self class];
+	NSMutableString *desc = [NSMutableString stringWithFormat:@"[%p: %@]", self, class];
+	unsigned int ivarCount;
+	Ivar *ivars = class_copyIvarList(class, &ivarCount); // instance variables declared by superclasses are not included
+	
+	[desc appendString:(ivarCount <= 1) ? @" " : @"\n"];
+	
+	for(int i = 0; i < ivarCount; i++)
+	{
+		Ivar ivar = ivars[i];
+		NSString *ivarName = [NSString stringWithFormat:@"%s", ivar_getName(ivar)];
+		id obj;
+		const char *typeEncoding = ivar_getTypeEncoding(ivar);
+		
+		if (ivarCount > 1)
+			indent(desc, gIndentLevel);
+		
+		switch (typeEncoding[0]) 
+		{
+			case '@':
+				obj = [self valueForKey:ivarName];
+				if (![gObjects containsObject:obj] || [obj isKindOfClass:[NSString class]])
+				{
+					[desc appendFormat:@"%@: %@", ivarName, [obj debugDescription]];
+				}
+				else
+				{
+					[desc appendFormat:@"%@: => ", ivarName];
+					[desc appendString:color([NSString stringWithFormat:@"%p", obj], referenceColor)];
+					[desc appendString:@""];
+				}
+				break;
+			default:
+				[desc appendFormat:@"%@: %p", ivarName, object_getIvar(self, ivar)];
+				break;
+		}
+		if (i < ivarCount-1)
+		{
+			[desc appendString:@"\n"];
+		}
+	}
+	free(ivars);
+	return [NSString stringWithString:desc];
 }
 
 static NSString *collectionDescription(id collection)
 {
-    BOOL isArray = NO, isDictionary = NO, isSet = NO;
-    NSString *markerStart = @"[?", *markerEnd = @"?]";
-    if ([collection isKindOfClass:[NSArray class]] || [collection isKindOfClass:[NSPointerArray class]])
-    {
+	BOOL isArray = NO, isDictionary = NO, isSet = NO;
+	NSString *markerStart = @"[?", *markerEnd = @"?]";
+	if ([collection isKindOfClass:[NSArray class]] || [collection isKindOfClass:[NSPointerArray class]])
+	{
 		if ([collection isKindOfClass:[NSPointerArray class]])
 		{
 			markerStart = @"<(";
@@ -177,70 +177,70 @@ static NSString *collectionDescription(id collection)
 			markerStart = @"(";
 			markerEnd   = @")";
 		}
-        isArray = YES;
-    }
-    else if ([collection isKindOfClass:[NSDictionary class]])
-    {
-        markerStart = @"{";
-        markerEnd   = @"}";
-        isDictionary = YES;
-    }
-    else if ([collection isKindOfClass:[NSSet class]])
-    {
-        markerStart = @"{(";
-        markerEnd   = @")}";
-        isSet = YES;
-    }
-    
-    if ([collection count] == 0)
-    {
-        return [NSString stringWithFormat:@"%p:%@ %@ %@", collection, markerStart, color(@"empty", emptyColor), markerEnd];
-    }
-    else if ([collection count] == 1)
-    {
-        NSString *debugDescription = nil;
-        if (isArray)
-        {
-            debugDescription = [[collection lastObject] debugDescription];
-        }
-        else if (isDictionary)
-        {
-            NSString *key = [[collection allKeys] lastObject];
-            debugDescription = [NSString stringWithFormat:@"%@: %@", color(key, keyColor), [[collection objectForKey:key] debugDescription]];
-        }
-        else if (isSet)
-        {
-            debugDescription = debugDescription = [[collection anyObject] debugDescription];
-        }
-        return [NSString stringWithFormat:@"%p:%@ %@ %@", collection, markerStart, debugDescription, markerEnd];
-    }
-    else
-    {
-        NSMutableString *desc = [NSMutableString stringWithFormat:@"%p:%@\n", collection, markerStart];
-        NSUInteger i = 0;
-        
-        for(id object in (isDictionary ? [collection allKeys] : collection))
-        {
-            indent(desc, gIndentLevel + 1);
-            if (isArray)
-            {
-                [desc appendFormat:[NSString stringWithFormat:@"%%%dd) ", [[NSString stringWithFormat:@"%d", [collection count]] length]], i++];                
-            }
-            else if (isDictionary)
-            {
-                [desc appendString:color(object, keyColor)];
-                [desc appendString:@": "];
-            }
-            gIndentLevel++;
-            [desc appendString:[(isDictionary ? [collection objectForKey:object] : object) debugDescription]];
-            gIndentLevel--;
-            [desc appendString:@"\n"];
-        }
-        
-        indent(desc, gIndentLevel);
-        [desc appendFormat:@"%@", markerEnd];
-        return [NSString stringWithString:desc];
-    }
+		isArray = YES;
+	}
+	else if ([collection isKindOfClass:[NSDictionary class]])
+	{
+		markerStart = @"{";
+		markerEnd   = @"}";
+		isDictionary = YES;
+	}
+	else if ([collection isKindOfClass:[NSSet class]])
+	{
+		markerStart = @"{(";
+		markerEnd   = @")}";
+		isSet = YES;
+	}
+	
+	if ([collection count] == 0)
+	{
+		return [NSString stringWithFormat:@"%p:%@ %@ %@", collection, markerStart, color(@"empty", emptyColor), markerEnd];
+	}
+	else if ([collection count] == 1)
+	{
+		NSString *debugDescription = nil;
+		if (isArray)
+		{
+			debugDescription = [[collection lastObject] debugDescription];
+		}
+		else if (isDictionary)
+		{
+			NSString *key = [[collection allKeys] lastObject];
+			debugDescription = [NSString stringWithFormat:@"%@: %@", color(key, keyColor), [[collection objectForKey:key] debugDescription]];
+		}
+		else if (isSet)
+		{
+			debugDescription = debugDescription = [[collection anyObject] debugDescription];
+		}
+		return [NSString stringWithFormat:@"%p:%@ %@ %@", collection, markerStart, debugDescription, markerEnd];
+	}
+	else
+	{
+		NSMutableString *desc = [NSMutableString stringWithFormat:@"%p:%@\n", collection, markerStart];
+		NSUInteger i = 0;
+		
+		for(id object in (isDictionary ? [collection allKeys] : collection))
+		{
+			indent(desc, gIndentLevel + 1);
+			if (isArray)
+			{
+				[desc appendFormat:[NSString stringWithFormat:@"%%%dd) ", [[NSString stringWithFormat:@"%d", [collection count]] length]], i++];				
+			}
+			else if (isDictionary)
+			{
+				[desc appendString:color(object, keyColor)];
+				[desc appendString:@": "];
+			}
+			gIndentLevel++;
+			[desc appendString:[(isDictionary ? [collection objectForKey:object] : object) debugDescription]];
+			gIndentLevel--;
+			[desc appendString:@"\n"];
+		}
+		
+		indent(desc, gIndentLevel);
+		[desc appendFormat:@"%@", markerEnd];
+		return [NSString stringWithString:desc];
+	}
 }
 
 @implementation NSObject (fullDescription)
@@ -287,8 +287,8 @@ static NSString *collectionDescription(id collection)
 
 - (NSString *) fullDescription
 {
-    BOOL isPath = [self isKindOfClass:NSClassFromString(@"NSPathStore2")];
-    return color([self description], isPath ? pathColor : black);
+	BOOL isPath = [self isKindOfClass:NSClassFromString(@"NSPathStore2")];
+	return color([self description], isPath ? pathColor : black);
 }
 
 @end
@@ -297,7 +297,7 @@ static NSString *collectionDescription(id collection)
 
 - (NSString *) fullDescription
 {
-    return collectionDescription(self);
+	return collectionDescription(self);
 }
 
 @end
@@ -315,7 +315,7 @@ static NSString *collectionDescription(id collection)
 
 - (NSString *) fullDescription
 {
-    return collectionDescription(self);
+	return collectionDescription(self);
 }
 
 @end
@@ -324,7 +324,7 @@ static NSString *collectionDescription(id collection)
 
 - (NSString *) fullDescription
 {
-    return collectionDescription(self);
+	return collectionDescription(self);
 }
 
 @end
