@@ -80,7 +80,7 @@ enum {
 #define referenceColor green
 #define emptyColor magenta
 #define keyColor cyan
-#define idColor red
+#define nilColor red
 
 static NSString* color(NSString *string, int color)
 {
@@ -119,7 +119,7 @@ static NSString *debugDescription(id self)
 				obj = [self valueForKey:ivarName];
 				if (![gObjects containsObject:obj] || [obj isKindOfClass:[NSString class]])
 				{
-					[desc appendFormat:@"%@: %@", ivarName, [obj debugDescription]];
+					[desc appendFormat:@"%@: %@", ivarName, obj ? [obj debugDescription] : color(@"nil", nilColor)];
 				}
 				else
 				{
@@ -205,7 +205,7 @@ static NSString *collectionDescription(id collection)
 			indent(desc, gIndentLevel + 1);
 			if (isArray)
 			{
-				[desc appendFormat:[NSString stringWithFormat:@"%%%dd) ", [[NSString stringWithFormat:@"%d", [collection count]] length]], i++];				
+				[desc appendFormat:[NSString stringWithFormat:@"%%%dd) ", [[NSString stringWithFormat:@"%d", [collection count]] length]], i++];
 			}
 			else if (isDictionary)
 			{
